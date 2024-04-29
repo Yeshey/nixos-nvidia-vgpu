@@ -33,7 +33,7 @@ let
     inherit system;
     config.allowUnfree = true;
   };
-  
+  /*
   nixpkgs.overlays = [
     (final: prev: {
       mdevctl = final.mdevctl.overrideAttrs (oldAttrs: {
@@ -44,7 +44,7 @@ let
         '';
       });
     })
-  ];
+  ]; */
   myMdevctl = pkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   # frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
