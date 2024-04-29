@@ -3,9 +3,11 @@ inputs: { pkgs, lib, config, ... }:
 let
   cfg = config.hardware.nvidia.vgpu;
 
-  driver-version = cfg.useMyDriver.driver-version; # "535.129.03";
+  driver-version = "535.129.03";
+  #driver-version = "525.105.14";
   # grid driver and wdys driver aren't actually used, but their versions are needed to find some filenames
-  vgpu-driver-version = cfg.useMyDriver.vgpu-driver-version; #"535.129.03";
+  vgpu-driver-version = "535.129.03";
+  #vgpu-driver-version = "525.105.14";
   grid-driver-version = "535.129.03";
   wdys-driver-version = "537.70";
   grid-version = "16.2";
@@ -25,13 +27,15 @@ let
   inherit (pkgs.stdenv.hostPlatform) system;
   patchedPkgs = import (fetchTarball {
         url = "https://github.com/NixOS/nixpkgs/archive/468a37e6ba01c45c91460580f345d48ecdb5a4db.tar.gz";
-        sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+        #sha256 = "sha256:057qsz43gy84myk4zc8806rd7nj4dkldfpn7wq6mflqa4bihvdka";
+        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
     }) {
     inherit system;
     config.allowUnfree = true;
   };
   mdevctl = patchedPkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
+  # frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
   frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
 
   combinedZipName = "NVIDIA-GRID-Linux-KVM-${vgpu-driver-version}-${wdys-driver-version}.zip";
@@ -105,7 +109,7 @@ let
       sha256 = "sha256-K7e/9q7DmXrrIFu4gsTv667bEOxRn6nTJYozP1+RGHs=";
     };
 
-    propagatedBuildInputs = [ pkgs.python310Packages.frida-python ];
+    propagatedBuildInputs = [ frida ];
     
     doCheck = false; # Disable running checks during the build
     
@@ -253,7 +257,20 @@ in
     };
   };
 
-  config = lib.mkMerge [ ( lib.mkIf cfg.enable {
+  config = lib.mkMerge [ ( 
+    
+     let
+ 
+    patched_pkgs = import (fetchTarball {
+        url = "github:nixos/nixpkgs/468a37e6ba01c45c91460580f345d48ecdb5a4db";
+        sha256 = "sha256:11ri51840scvy9531rbz32241l7l81sa830s90wpzvv86v276aqs";
+    }) {
+    config.allowUnfree = true;
+  };
+
+ in
+    
+    lib.mkIf cfg.enable {
 
     boot.kernelPackages = patchedPkgs.linuxPackages_5_15; # needed for this linuxPackages_5_19
   
@@ -266,6 +283,8 @@ in
 
       # the new driver (getting from my Google drive)
       # the new driver (compiled in a derivation above)
+      src = "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run";
+      /* 
       src = if (!cfg.useMyDriver.enable) then
         "${compiled-driver}/NVIDIA-Linux-x86_64-${driver-version}-merged-vgpu-kvm-patched.run"
         else
@@ -281,7 +300,7 @@ in
               # sha256-9fhYGu9fqxcQC2Kc81qh2RMo1QcLBUBo8U+pPn+jthQ=
               #
               hash = cfg.useMyDriver.sha256;
-            };
+            }; */
       # src = patchedPkgs.fetchurl {
       #         name = "NVIDIA-Linux-x86_64-525.105.17-merged-vgpu-kvm-patched.run"; # So there can be special characters in the link below: https://github.com/NixOS/nixpkgs/issues/6165#issuecomment-141536009
       #         url = "https://drive.usercontent.google.com/download?id=17NN0zZcoj-uY2BELxY2YqGvf6KtZNXhG&export=download&authuser=0&confirm=t&uuid=b70e0e36-34df-4fde-a86b-4d41d21ce483&at=APZUnTUfGnSmFiqhIsCNKQjPLEk3%3A1714043345939";
