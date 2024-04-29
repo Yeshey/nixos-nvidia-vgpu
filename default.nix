@@ -33,7 +33,19 @@ let
     inherit system;
     config.allowUnfree = true;
   };
-  mdevctl = patchedPkgs.callPackage ./mdevctl {};
+  
+  nixpkgs.overlays = [
+    (final: prev: {
+      mdevctl = final.mdevctl.overrideAttrs (oldAttrs: {
+        postPatch = ''
+          substituteInPlace 60-mdevctl.rules \
+            --replace /usr/sbin/ $out/ \
+            --replace /bin/sh ${pkgs.bash}/bin/sh
+        '';
+      });
+    })
+  ];
+  myMdevctl = pkgs.callPackage ./mdevctl {};
   #frida = (builtins.getFlake "github:Yeshey/frida-nix").packages.${system}.frida-tools; # if not using a flake, you can use this with --impure
   # frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
   frida = pkgs.python310Packages.frida-python; #inputs.frida.packages.${system}.frida-tools;
@@ -387,8 +399,9 @@ in
 
     boot.kernelModules = [ "nvidia-vgpu-vfio" ];
 
-    environment.systemPackages = [ mdevctl];
-    services.udev.packages = [ mdevctl ];
+    #programs.mdevctl.enable = true;
+    environment.systemPackages = [ myMdevctl ];
+    services.udev.packages = [ myMdevctl ];
 
   })
 
