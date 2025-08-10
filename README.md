@@ -6,39 +6,8 @@
 > <details>
 > <summary>Example Working Config of Their Module</summary>
 > 
-> ```nix
-> environment.systemPackages = [
->   pkgs.looking-glass-client
->   # for mdevctl you might need to create these folders if it gives error when running for the first time:
->   # /usr/lib/mdevctl/scripts.d/callouts
->   # /usr/lib/mdevctl/scripts.d/notifiers
->   pkgs.mdevctl
-> ];
-> 
-> services.fastapi-dls = {
->   enable = true;
->   # All possible options are listed here: https://git.collinwebdesigns.de/oscar.krause/fastapi-dls#configuration
->   debug = true;                # DEBUG
->   listen.ip = "0.0.0.0";      # DLS_URL localhost didn't work for me
-> };
-> 
-> # Need to test which of these had an effect and which didn't, vup_swrlwar=1 should only be needed for X11 setups
-> boot.extraModprobeConfig = 
->   ''
->   options nvidia vup_sunlock=1 vup_swrlwar=1 vup_qmode=1
->   ''; # (for driver 535) bypasses `error: vmiop_log: NVOS status 0x1` in nvidia-vgpu-mgr.service when starting VM
-> boot.kernelModules = [ "nvidia-vgpu-vfio" ];
-> # ----- 
->
-> hardware.nvidia.package = config.boot.kernelPackages.nvidiaPackages.vgpu_16_5; # vgpu_17_3 vgpu_16_5
-> 
-> hardware.nvidia.vgpu.patcher.enable = true;
-> # hardware.nvidia.vgpu.patcher.options.remapP40ProfilesToV100D = true; # for 17_x for Pascal Cards
-> # hardware.nvidia.vgpu.patcher.options.doNotForceGPLLicense = true;
-> 
-> hardware.nvidia.vgpu.driverSource.name = "NVIDIA-GRID-Linux-KVM-535.161.05-535.161.08-538.46.zip"; # 16_5
-> hardware.nvidia.vgpu.driverSource.url = "https://drive.usercontent.google.com/download?id=1iVXS0uzQFzjbJSIM_XV2FKRMBIGnssJ6&confirm=xxx"; # 16_5 zip
-> ```
+> https://github.com/Yeshey/nixOS-Config/blob/17000dc17711fabb19a86a62ff8b25315a215c54/nixos/hyrulecastle/vgpu.nix 
+>   
 > </details>
 
 This module unlocks vGPU functionality on your consumer nvidia card.
