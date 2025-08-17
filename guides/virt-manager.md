@@ -8,16 +8,16 @@ You'll have to change the commands to create the vgpus and the name of your virt
 A good guide on this: https://github.com/tuh8888/libvirt_win10_vm.
 My current win10 config looks like this, `sudo virsh edit win10`:
 ```xml
-<domain xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0" type="kvm">
-  <name>win10</name>
-  <uuid>7412b302-dae5-46a7-a9d3-c849658e4897</uuid>
+<domain type="kvm">
+  <name>win11</name>
+  <uuid>6a56489d-f65e-4e3b-9d99-ec7f89237e34</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
-      <libosinfo:os id="http://microsoft.com/win/10"/>
+      <libosinfo:os id="http://microsoft.com/win/11"/>
     </libosinfo:libosinfo>
   </metadata>
-  <memory unit="KiB">11776000</memory>
-  <currentMemory unit="KiB">11776000</currentMemory>
+  <memory unit="KiB">8388608</memory>
+  <currentMemory unit="KiB">8388608</currentMemory>
   <vcpu placement="static">8</vcpu>
   <cputune>
     <vcpupin vcpu="0" cpuset="4"/>
@@ -29,10 +29,15 @@ My current win10 config looks like this, `sudo virsh edit win10`:
     <vcpupin vcpu="6" cpuset="10"/>
     <vcpupin vcpu="7" cpuset="11"/>
   </cputune>
-  <os>
-    <type arch="x86_64" machine="pc-q35-7.1">hvm</type>
-    <loader readonly="yes" type="pflash">/run/libvirt/nix-ovmf/OVMF_CODE.fd</loader>
-    <nvram template="/run/libvirt/nix-ovmf/OVMF_VARS.fd">/var/lib/libvirt/qemu/nvram/win10_VARS.fd</nvram>
+  <os firmware="efi">
+    <type arch="x86_64" machine="pc-q35-9.2">hvm</type>
+    <firmware>
+      <feature enabled="no" name="enrolled-keys"/>
+      <feature enabled="yes" name="secure-boot"/>
+    </firmware>
+    <loader readonly="yes" secure="yes" type="pflash" format="raw">/nix/store/i03rw8r4dysh2185c7pfwc6zgc837gfc-qemu-9.2.4/share/qemu/edk2-x86_64-secure-code.fd</loader>
+    <nvram template="/nix/store/i03rw8r4dysh2185c7pfwc6zgc837gfc-qemu-9.2.4/share/qemu/edk2-i386-vars.fd" templateFormat="raw" format="raw">/var/lib/libvirt/qemu/nvram/win11_VARS.fd</nvram>
+    <boot dev="hd"/>
   </os>
   <features>
     <acpi/>
@@ -41,14 +46,26 @@ My current win10 config looks like this, `sudo virsh edit win10`:
       <relaxed state="on"/>
       <vapic state="on"/>
       <spinlocks state="on" retries="8191"/>
+      <vpindex state="on"/>
+      <runtime state="on"/>
+      <synic state="on"/>
+      <stimer state="on"/>
+      <frequencies state="on"/>
+      <tlbflush state="on"/>
+      <ipi state="on"/>
+      <evmcs state="on"/>
+      <avic state="on"/>
     </hyperv>
     <vmport state="off"/>
+    <smm state="on"/>
   </features>
   <cpu mode="host-passthrough" check="none" migratable="on">
-    <topology sockets="1" dies="1" cores="4" threads="2"/>
+    <topology sockets="1" dies="1" clusters="1" cores="4" threads="2"/>
   </cpu>
   <clock offset="localtime">
-    <timer name="hpet" present="yes"/>
+    <timer name="rtc" tickpolicy="catchup"/>
+    <timer name="pit" tickpolicy="delay"/>
+    <timer name="hpet" present="no"/>
     <timer name="hypervclock" present="yes"/>
   </clock>
   <on_poweroff>destroy</on_poweroff>
@@ -62,24 +79,15 @@ My current win10 config looks like this, `sudo virsh edit win10`:
     <emulator>/run/libvirt/nix-emulators/qemu-system-x86_64</emulator>
     <disk type="file" device="disk">
       <driver name="qemu" type="qcow2"/>
-      <source file="/mnt/DataDisk/AppFiles/interchangeable/VMs/Windows/win10.qcow2"/>
-      <target dev="vda" bus="virtio"/>
-      <boot order="1"/>
-      <address type="pci" domain="0x0000" bus="0x04" slot="0x00" function="0x0"/>
+      <source file="/home/yeshey/AppFiles/interchangeable/VMs/Windows/win10.qcow2"/>
+      <target dev="sda" bus="sata"/>
+      <address type="drive" controller="0" bus="0" target="0" unit="0"/>
     </disk>
-    <disk type="file" device="cdrom">
-      <driver name="qemu" type="raw"/>
-      <source file="/mnt/DataDisk/AppFiles/interchangeable/VMs/Windows/Win11_22H2_EnglishInternational_x64v1.iso"/>
-      <target dev="sdb" bus="sata"/>
-      <readonly/>
-      <address type="drive" controller="0" bus="0" target="0" unit="1"/>
-    </disk>
-    <disk type="file" device="cdrom">
-      <driver name="qemu" type="raw"/>
-      <source file="/mnt/DataDisk/AppFiles/interchangeable/VMs/Windows/virtio-win-0.1.215.iso"/>
-      <target dev="sdc" bus="sata"/>
-      <readonly/>
-      <address type="drive" controller="0" bus="0" target="0" unit="2"/>
+    <disk type="block" device="disk">
+      <driver name="qemu" type="raw" cache="none" io="native"/>
+      <source dev="/dev/sdb"/>
+      <target dev="vdb" bus="virtio"/>
+      <address type="pci" domain="0x0000" bus="0x06" slot="0x00" function="0x0"/>
     </disk>
     <controller type="usb" index="0" model="qemu-xhci" ports="15">
       <address type="pci" domain="0x0000" bus="0x02" slot="0x00" function="0x0"/>
@@ -157,12 +165,12 @@ My current win10 config looks like this, `sudo virsh edit win10`:
     </controller>
     <controller type="pci" index="15" model="pcie-root-port">
       <model name="pcie-root-port"/>
-      <target chassis="15" port="0x1e"/>
-      <address type="pci" domain="0x0000" bus="0x00" slot="0x03" function="0x6"/>
+      <target chassis="15" port="0x8"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x01" function="0x0"/>
     </controller>
     <controller type="pci" index="16" model="pcie-to-pci-bridge">
       <model name="pcie-pci-bridge"/>
-      <address type="pci" domain="0x0000" bus="0x0a" slot="0x00" function="0x0"/>
+      <address type="pci" domain="0x0000" bus="0x04" slot="0x00" function="0x0"/>
     </controller>
     <controller type="sata" index="0">
       <address type="pci" domain="0x0000" bus="0x00" slot="0x1f" function="0x2"/>
@@ -171,9 +179,9 @@ My current win10 config looks like this, `sudo virsh edit win10`:
       <address type="pci" domain="0x0000" bus="0x03" slot="0x00" function="0x0"/>
     </controller>
     <interface type="network">
-      <mac address="52:54:00:00:06:6c"/>
+      <mac address="52:54:00:fc:89:25"/>
       <source network="default"/>
-      <model type="virtio"/>
+      <model type="e1000e"/>
       <address type="pci" domain="0x0000" bus="0x01" slot="0x00" function="0x0"/>
     </interface>
     <serial type="pty">
@@ -188,11 +196,9 @@ My current win10 config looks like this, `sudo virsh edit win10`:
       <target type="virtio" name="com.redhat.spice.0"/>
       <address type="virtio-serial" controller="0" bus="0" port="1"/>
     </channel>
-    <channel type="spiceport">
-      <source channel="org.spice-space.webdav.0"/>
-      <target type="virtio" name="org.spice-space.webdav.0"/>
-      <address type="virtio-serial" controller="0" bus="0" port="2"/>
-    </channel>
+    <input type="tablet" bus="usb">
+      <address type="usb" bus="0" port="1"/>
+    </input>
     <input type="mouse" bus="ps2"/>
     <input type="keyboard" bus="ps2"/>
     <graphics type="spice" autoport="yes">
@@ -212,14 +218,15 @@ My current win10 config looks like this, `sudo virsh edit win10`:
       </source>
       <address type="pci" domain="0x0000" bus="0x05" slot="0x00" function="0x0"/>
     </hostdev>
+    <hostdev mode="subsystem" type="usb" managed="yes">
+      <source>
+        <vendor id="0x258a"/>
+        <product id="0x0016"/>
+      </source>
+      <address type="usb" bus="0" port="5"/>
+    </hostdev>
     <redirdev bus="usb" type="spicevmc">
       <address type="usb" bus="0" port="2"/>
-    </redirdev>
-    <redirdev bus="usb" type="spicevmc">
-      <address type="usb" bus="0" port="4"/>
-    </redirdev>
-    <redirdev bus="usb" type="spicevmc">
-      <address type="usb" bus="0" port="1"/>
     </redirdev>
     <redirdev bus="usb" type="spicevmc">
       <address type="usb" bus="0" port="3"/>
@@ -232,9 +239,6 @@ My current win10 config looks like this, `sudo virsh edit win10`:
       <address type="pci" domain="0x0000" bus="0x10" slot="0x01" function="0x0"/>
     </shmem>
   </devices>
-  <qemu:capabilities>
-    <qemu:del capability="usb-host.hostdevice"/>
-  </qemu:capabilities>
 </domain>
 ```
 
